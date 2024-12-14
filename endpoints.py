@@ -4,22 +4,26 @@ from pydantic import BaseModel
 from rag_handler import RAGHandler
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
-
-logging.basicConfig(level=logging.DEBUG)
+from fastapi.responses import PlainTextResponse
+import os
+logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
 class AskQuestion(BaseModel):
     question: str
 
 CONNECTION_STRING = "postgresql://postgres@localhost:5432/imdb" # replace with your connection string
-OPENAI_API_KEY = ""
+
+with open("api_key.txt", "r") as f:
+    os.environ["OPENAI_API_KEY"] = f.read().strip()
+
 
 # Instantiate the RAGHandler
 rag_handler = RAGHandler(
     connection_string=CONNECTION_STRING,
-    openai_api_key=OPENAI_API_KEY,
     table_name='imdb',   # replace with your table you want to query
-    schema='public'
+    schema='public',
+    system_prompt_path='dd.txt'
 )
 
 @app.post("/ask-question")
@@ -45,6 +49,21 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+
+@app.get("/reinitialize")
+def reinitialize():
+    """
+    Reinitializes the RAGHandler object.
+    """
+    rag_handler.reinitialize_messages()
+    return {"message": "RAGHandler reinitialized."}
+
+@app.get("/show-system-prompt", response_class=PlainTextResponse)
+def show_system_prompt():
+    """
+    Shows the system prompt to the user.
+    """
+    return rag_handler.system_prompt
 
 if __name__ == '__main__':
     uvicorn.run("endpoints:app", host='localhost', port=4000, reload=True)

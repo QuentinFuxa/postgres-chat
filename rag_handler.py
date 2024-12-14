@@ -127,12 +127,15 @@ class RAGHandler:
 
     def __init__(
         self,
-        connection_string: str,
-        openai_api_key: str,
         table_name: str,
+        connection_string: str,
+        openai_api_key: str = None,
         schema: str = "public",
         llm_model: str = "gpt-4o",
-        embedding_model: str = "text-embedding-3-small"
+        embedding_model: str = "text-embedding-3-small",
+        system_prompt: str = None,
+        system_prompt_path: str = None
+        
     ):
         """
         Initialize the RAGHandler with database and LLM configurations.
@@ -142,6 +145,7 @@ class RAGHandler:
         self.schema = schema
         self.llm_model = llm_model
         self.embedding_model = embedding_model
+        self.system_prompt = system_prompt
 
         # Set up engine and cursor
         self.url = make_url(connection_string)
@@ -149,7 +153,11 @@ class RAGHandler:
         self.connection = psycopg2.connect(connection_string)
         self.cursor = self.connection.cursor()
 
-        # Initialize OpenAI client
+        if openai_api_key is None:
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+            if openai_api_key is None:
+                raise ValueError("OpenAI API key must be provided or set as an environment variable.")
+
         os.environ["OPENAI_API_KEY"] = openai_api_key
         self.client = OpenAI(api_key=openai_api_key)
 
@@ -157,12 +165,23 @@ class RAGHandler:
         self.messages: List[Dict[str, Any]] = []
 
         # Generate the initial system prompt
-        system_prompt = self._generate_system_prompt()
+        if self.system_prompt is None:
+            if system_prompt_path is not None:
+                self.load_system_prompt(system_prompt_path)
+            else:
+                self._generate_system_prompt()
+        
         self.messages.append({
             "role": "system",
-            "content": system_prompt
+            "content": self.system_prompt
         })
 
+    def load_system_prompt(self, path: str):
+        """
+        Loads the system prompt from a file.
+        """
+        with open(path, "r") as f:
+            self.system_prompt = f.read()
 
     def _generate_table_schema_and_sample(self):
         """
@@ -199,16 +218,27 @@ class RAGHandler:
         Queries the LLM to generate a synthesis or summary for each column based on
         the schema description and sample data.
         """
-        prompt = (
-            "You have the following database table schema:\n\n"
-            f"{schema_description}\n\n"
-            "Here are 5 sample rows (as JSON-like objects):\n"
-            f"{sample_data}\n\n"
-            "Please provide a concise synthesis of each column. For example, "
-            "describe the column's potential meaning or use, notable patterns or variations "
-            "from the sample data, and anything that stands out. "
-            "Be clear and structured in your summary."
-        )
+        prompt = f"""
+            You have the following database table schema:
+            {schema_description}
+            
+            Here are 5 sample rows (as JSON-like objects):
+            {sample_data}
+            
+            Please provide a concise synthesis of each column. For example, describe the column's potential meaning or use.
+            Provide also the type of data it contains, with some examples if possible.
+            Remember that you are only provided with a limited sample of the data, so don't make crazy assumptions. If you don't understand a column, you don't need to provide a summary for it.
+            Be clear and structured in your summary.
+            
+            Return a summary in this format:
+            
+            1. Column Name: 
+                - Type of data.
+                - Summary of the column.
+                - Example values: value1, ...
+            2. ...
+
+        """
 
         response = self.client.chat.completions.create(
             model="gpt-4o-mini",  # smaller model for summarization
@@ -229,7 +259,7 @@ class RAGHandler:
         schema_description, sample_data = self._generate_table_schema_and_sample()
         columns_synthesis = self._summarize_table_columns(schema_description, sample_data)
 
-        return BASE_SYSTEM_PROMPT.format(
+        self.system_prompt = BASE_SYSTEM_PROMPT.format(
             table_name=f"{self.schema}.{self.table_name}",
             columns_synthesis=columns_synthesis
         )
@@ -352,6 +382,24 @@ class RAGHandler:
             "content": user_content
         })
 
+    def reinitialize_messages(self):
+        """
+        Reinitializes the conversation messages to only include the system prompt.
+        """
+        self.messages = [
+            {
+                "role": "system",
+                "content": self.system_prompt
+            }
+        ]
+        
+    def save_system_prompt(self, path: str):
+        """
+        Saves the system prompt to a file.
+        """
+        with open(path, "w") as f:
+            f.write(self.system_prompt)
+        
 
     def run_conversation(self) -> dict:
         """
