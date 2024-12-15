@@ -4,7 +4,7 @@ with open("README.md", encoding="utf-8") as f:
     long_desc = f.read()
 
 setup(
-    name='rag-handler',
+    name='postgres-chat',
     version='0.1.0',
     description='Retrieval-Augmented Generation Handler using PostgreSQL and OpenAI',
     long_description=long_desc,
