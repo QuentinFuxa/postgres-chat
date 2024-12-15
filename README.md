@@ -4,15 +4,22 @@ A **Retrieval-Augmented Generation (RAG)** handler class built around a PostgreS
 
 ## Features
 
-	-	**System Prompt Generation:** Automates the creation of a system prompt that describes your PostgreSQL table schema and sample rows.
-	-	**SQL Execution & Vector Replacement: Executes SQL queries directly against the database. If the SQL query contains <vector>TEXT<vector/> placeholders, those placeholders are replaced with vector embeddings generated via OpenAI.
-	-	**Chat-Based Interaction:** Supports a chat-based workflow by combining user messages, system prompts, and LLM responses. Integrates function calls for:
-	    -	Executing SQL queries (execute_sql_query),
-	    -	Structuring objects for potential insertion (structure_object_from_draft),
-	    -	Generating Plotly graphs (plot_graph).
-	-	**Schema Summarization**: Summarizes a database table’s schema by prompting the LLM, providing a quick overview of column purposes and example values.
-	-	**Object Structuring**: Helps transform free-form text “drafts” into structured objects (e.g., JSON) for database insertion.
-	-	**Embedding Integration**: Automatically generates and stores vector embeddings for specified text columns when creating or replacing tables.
+- **System Prompt Generation:** Automates the creation of a system prompt that describes your PostgreSQL table schema and sample rows.
+
+
+- **SQL Execution & Vector Replacement**: Executes SQL queries directly against the database. If the SQL query contains <vector>TEXT<vector/> placeholders, those placeholders are replaced with vector embeddings generated via OpenAI.
+
+- **Chat-Based Interaction:** Supports a chat-based workflow by combining user messages, system prompts, and LLM responses. Integrates function calls for:
+
+ 	- Executing SQL queries (execute_sql_query),
+ 	- Structuring objects for potential insertion (structure_object_from_draft),
+	-	Generating Plotly graphs (plot_graph).
+
+- **Schema Summarization**: Summarizes a database table’s schema by prompting the LLM, providing a quick overview of column purposes and example values.
+
+- **Object Structuring**: Helps transform free-form text “drafts” into structured objects (e.g., JSON) for database insertion.
+
+- **Embedding Integration**: Automatically generates and stores vector embeddings for specified text columns when creating or replacing tables.
 
 
 ## Installation
@@ -33,18 +40,17 @@ source venv/bin/activate  # Linux/MacOS
 
 
 ## Install dependencies
+
+```
 pip install -r requirements.txt
+```
 
-Dependencies :
-	•	openai
-	•	pandas
-	•	psycopg2
-	•	SQLAlchemy
-	•	plotly (if you need graphing functionality)
 
-Prerequisites
-	1.	PostgreSQL Database: You need an existing PostgreSQL database. The code connects using a provided connection string (e.g., postgresql://user:password@hostname:5432/dbname).
-	2.	OpenAI API Key: Required for generating embeddings and LLM responses. You can set it via an environment variable: OPENAI_API_KEY.
+**Prerequisites**
+
+-	PostgreSQL Database: You need an existing PostgreSQL database. The code connects using a provided connection string (e.g., postgresql://user:password@hostname:5432/dbname).
+
+-	OpenAI API Key: Required for generating embeddings and LLM responses. You can set it via an environment variable: OPENAI_API_KEY.
 
 ## Usage
 
@@ -65,46 +71,93 @@ handler = RAGHandler(
 )
 ```
 
-	•	table_name: The target PostgreSQL table name you want to interact with.
-	•	connection_string: The PostgreSQL connection string.
-	•	openai_api_key: Your OpenAI API key (can also be set as an environment variable).
-	•	schema: Optional, defaults to "public".
-	•	llm_model: Which LLM model to use for chat completions.
-	•	embedding_model: Which model to use for embeddings.
+## Using custom system prompt, saving and loading
 
-
-## Generating the System Prompt
-
-When the RAGHandler is first initialized, it attempts to generate a system prompt based on your table’s columns and a sample of rows. This system prompt is stored in handler.system_prompt.
-
-If needed, you can regenerate or overwrite the system prompt:
+When the RAGHandler is first initialized, it attempts to generate a system prompt based on your table’s columns and a sample of rows. You can also provide a custom system string using system_prompt :
 
 ```
-handler._generate_system_prompt()
-print(handler.system_prompt)
+handler = RAGHandler(
+    ...
+	system_prompt = ""your system prompt"""
+
+)
 ```
+
+You can also save and reload your system prompt :
+
+```
+handler.save_system_prompt(path='your_path')
+```
+
+And you can reload it using 
+
+```
+handler = RAGHandler(
+    ...
+	system_prompt_path = "your system prompt path"
+
+)
+```
+
 
 ## Adding Messages and Running the Conversation
 
-You can simulate a chat with the LLM by adding user messages and then calling run_conversation():
+You can start a chat with the LLM by adding user messages and then calling run_conversation():
 
 ```
-handler.reinitialize_messages()  # Clears old messages, loads system prompt
+handler.reinitialize_messages()  # Clears old messages. Not necessary at start
 
-handler.add_user_message("Hello, can you give me a summary of the data?")
+# Let's assume we have a movie database from IMBD
+
+handler.add_user_message("""
+What movies are similar to The Matrix
+but have an average rating above 8.0?
+Give the movie titles, ratings, and links if available.
+""")
 response_dict = handler.run_conversation()
 
 print("LLM Response:", response_dict["response"])
 print("Executed SQL Queries:", response_dict["executed_queries"])
+
+
+handler.add_user_message("""
+Generate a  chart  showing the yearly count of new releases 
+from 2010 to the latest year available.
+""")
+response_dict = handler.run_conversation()
+
+
+handler.add_user_message("""
+Please list the top 5 directors with the highest average movie rating, 
+alongside the average rating and the number of movies they've directed. 
+Also, for each director, provide one example of their best movie link.
+""")
+response_dict = handler.run_conversation()
+
+print("LLM Response:", response_dict["response"])
+print("Executed SQL Queries:", response_dict["executed_queries"])
+
+handler.add_user_message("""
+Among the movies bout time travel, 
+which genres have the highest average rating overall? 
+Group the response by genre, include the rating, and also 
+provide an example movie link from each group.
+""")
+response_dict = handler.run_conversation()
+
+print("LLM Response:", response_dict["response"])
+print("Executed SQL Queries:", response_dict["executed_queries"])
+
 ```
 
-	•	response_dict["response"]: The final textual response from the LLM.
-	•	response_dict["executed_queries"]: List of SQL queries the LLM executed under the hood.
+- ```response_dict["response"]```: The final textual response from the LLM.
+- ```response_dict["executed_queries"]```: List of SQL queries the LLM executed under the hood.
 
-Executing SQL Queries Directly
+**Executing SQL Queries Directly**
 
 If you want to run SQL queries yourself through the RAGHandler (and automatically handle vector placeholders), you can do so directly:
 
+```
 sql_query = """
 SELECT id, name, some_vector_column
 FROM public.your_table
@@ -112,10 +165,11 @@ WHERE some_vector_column <-> <vector>search text<vector/> < 0.8
 """
 result_string = handler.execute_sql_query(sql_query)
 print("SQL Query Result:", result_string)
+```
 
-	•	The substring <vector>search text<vector/> will be replaced by the actual embedding array.
+- The substring ```<vector>search text<vector/>``` will be replaced by the actual embedding array.
 
-Structuring Objects
+**Structuring Objects**
 
 If you have a free-form “draft” text that describes an object you’d like to insert into the database, you can use:
 
@@ -124,7 +178,7 @@ print(structured_response)
 
 This will prompt the LLM to return a structured object (like JSON) that aligns with the table’s columns.
 
-Creating/Embedding a Table from a DataFrame
+**Creating/Embedding a Table from a DataFrame**
 
 You can create or replace a table from a pandas DataFrame. Specify which columns need vector embeddings:
 
@@ -142,8 +196,9 @@ handler.create_table_from_df(df, embed_columns=["text_column"], table_name="new_
 ```
 
 This:
-	1.	Generates embeddings for the specified columns.
-	2.	Creates (or replaces) a table in the database with an extra column named text_column_embedding (type VECTOR(1536)).
+
+- Generates embeddings for the specified columns.
+- Creates (or replaces) a table in the database with an extra column named text_column_embedding (type VECTOR(1536)).
 
 ## Environment Variables
 	•	OPENAI_API_KEY: Your OpenAI API key must be set either in the environment or passed in code.
