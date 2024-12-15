@@ -1,4 +1,4 @@
-# RAGHandler for PostgreSQL
+# RAGHandler for PostgreSQL with pgvector
 
 A **Retrieval-Augmented Generation (RAG)** handler class built around a PostgreSQL database and OpenAI’s API. This code allows you to query a database, generate vector embeddings for columns, and integrate these operations with a conversational Large Language Model (LLM), such as GPT.
 
@@ -6,20 +6,9 @@ A **Retrieval-Augmented Generation (RAG)** handler class built around a PostgreS
 
 - **System Prompt Generation:** Automates the creation of a system prompt that describes your PostgreSQL table schema and sample rows.
 
+- **Sophisticated SQL Execution**:  Runs multi-step queries with pgvector embeddings for semantic search and filtering.
 
-- **SQL Execution & Vector Replacement**: Executes SQL queries directly against the database. If the SQL query contains <vector>TEXT<vector/> placeholders, those placeholders are replaced with vector embeddings generated via OpenAI.
-
-- **Chat-Based Interaction:** Supports a chat-based workflow by combining user messages, system prompts, and LLM responses. Integrates function calls for:
-
- 	- Executing SQL queries (execute_sql_query),
- 	- Structuring objects for potential insertion (structure_object_from_draft),
-	-	Generating Plotly graphs (plot_graph).
-
-- **Schema Summarization**: Summarizes a database table’s schema by prompting the LLM, providing a quick overview of column purposes and example values.
-
-- **Object Structuring**: Helps transform free-form text “drafts” into structured objects (e.g., JSON) for database insertion.
-
-- **Embedding Integration**: Automatically generates and stores vector embeddings for specified text columns when creating or replacing tables.
+- **Plotly Graph Generation**: Helps transform free-form text “drafts” into structured objects (e.g., JSON) for database insertion.
 
 
 ## Installation
