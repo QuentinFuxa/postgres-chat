@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='rag-handler',
+    name='postgres-chat',
     version='0.1.0',
     description='Retrieval-Augmented Generation Handler using PostgreSQL and OpenAI',
     author='Quentin Fuxa',
