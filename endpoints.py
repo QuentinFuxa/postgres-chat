@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI
 from pydantic import BaseModel
-from rag_handler import RAGHandler
+from postgres_chat import PostgresChat
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
@@ -19,7 +19,7 @@ with open("api_key.txt", "r") as f:
 
 
 # Instantiate the RAGHandler
-rag_handler = RAGHandler(
+rag_handler = PostgresChat(
     connection_string=CONNECTION_STRING,
     table_name='imdb',   # replace with your table you want to query
     schema='public',

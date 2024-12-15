@@ -37,7 +37,7 @@ pip install -r requirements.txt
 
 **Prerequisites**
 
--	PostgreSQL Database: You need an existing PostgreSQL database. The code connects using a provided connection string (e.g., postgresql://user:password@hostname:5432/dbname).
+-	PostgreSQL Database: You need an existing PostgreSQL database. The code connects using a provided connection string (e.g., postgresql://user:password@hostname:5432/dbname). You have to install pgvector too.
 
 -	OpenAI API Key: Required for generating embeddings and LLM responses. You can set it via an environment variable: OPENAI_API_KEY.
 
@@ -45,12 +45,12 @@ pip install -r requirements.txt
 
 ### Initialization
 
-Use the RAGHandler class to set up the connection to your database and OpenAI.
+Use the PostgresChat class to set up the connection to your database and OpenAI.
 
 ```
-from rag_handler import RAGHandler
+from postgres_chat import PostgresChat
 
-handler = RAGHandler(
+handler = PostgresChat(
     table_name="your_table",
     connection_string="postgresql://user:password@localhost:5432/your_database",
     openai_api_key="YOUR_OPENAI_API_KEY",
@@ -62,10 +62,10 @@ handler = RAGHandler(
 
 ## Using custom system prompt, saving and loading
 
-When the RAGHandler is first initialized, it attempts to generate a system prompt based on your table’s columns and a sample of rows. You can also provide a custom system string using system_prompt :
+When the PostgresChat is first initialized, it attempts to generate a system prompt based on your table’s columns and a sample of rows. You can also provide a custom system string using system_prompt :
 
 ```
-handler = RAGHandler(
+handler = PostgresChat(
     ...
 	system_prompt = ""your system prompt"""
 
@@ -81,7 +81,7 @@ handler.save_system_prompt(path='your_path')
 And you can reload it using 
 
 ```
-handler = RAGHandler(
+handler = PostgresChat(
     ...
 	system_prompt_path = "your system prompt path"
 
@@ -144,7 +144,7 @@ print("Executed SQL Queries:", response_dict["executed_queries"])
 
 **Executing SQL Queries Directly**
 
-If you want to run SQL queries yourself through the RAGHandler (and automatically handle vector placeholders), you can do so directly:
+If you want to run SQL queries yourself through the PostgresChat (and automatically handle vector placeholders), you can do so directly:
 
 ```
 sql_query = """

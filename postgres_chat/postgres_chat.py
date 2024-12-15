@@ -119,7 +119,7 @@ class VECTOR(UserDefinedType):
         return "VECTOR(1536)"
 
 
-class RAGHandler:
+class PostgresChat:
     """
     Retrieval-Augmented Generation Handler that wraps all logic needed
     to talk to a PostgreSQL database via LLM queries.
