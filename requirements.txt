@@ -1,0 +1,5 @@
+openai
+pandas
+psycopg2
+sqlalchemy
+plotly

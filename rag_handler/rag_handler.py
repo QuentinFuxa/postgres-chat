@@ -138,7 +138,38 @@ class RAGHandler:
         
     ):
         """
-        Initialize the RAGHandler with database and LLM configurations.
+        Initializes a RAGHandler instance with database and LLM configurations.
+
+        Args:
+            table_name (str): Name of the primary table to interact with.
+            connection_string (str): PostgreSQL connection string.
+            openai_api_key (str, optional): OpenAI API key. 
+                If None, uses the OPENAI_API_KEY environment variable. Defaults to None.
+            schema (str, optional): PostgreSQL schema name. Defaults to "public".
+            llm_model (str, optional): Chat-completion model identifier. Defaults to "gpt-4o".
+            embedding_model (str, optional): Embedding model identifier. Defaults to "text-embedding-3-small".
+            system_prompt (str, optional): Custom system prompt string. If None, a new prompt 
+                is generated from the schema. Defaults to None.
+            system_prompt_path (str, optional): Path to a file containing a custom system prompt. 
+                Used if system_prompt is None. Defaults to None.
+
+        Raises:
+            ValueError: If no valid OpenAI API key is provided (either explicitly or via environment variable).
+
+        Side Effects:
+            - Establishes a connection to the PostgreSQL database using psycopg2 and SQLAlchemy.
+            - Generates or loads a system prompt.
+            - Sets up an OpenAI client for embeddings and chat completions.
+
+        Example:
+            >>> handler = RAGHandler(
+            ...     table_name="movies",
+            ...     connection_string="postgresql://user:pass@localhost:5432/mydb",
+            ...     openai_api_key="sk-...",
+            ...     schema="public",
+            ...     llm_model="gpt-4o",
+            ...     embedding_model="text-embedding-3-small"
+            ... )
         """
         self.connection_string = connection_string
         self.table_name = table_name
