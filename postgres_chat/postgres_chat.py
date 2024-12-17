@@ -34,7 +34,8 @@ class PostgresChat:
         llm_model: str = "gpt-4o",
         embedding_model: str = "text-embedding-3-small",
         system_prompt: str = None,
-        system_prompt_path: str = None
+        system_prompt_path: str = None,
+        return_graph_object: bool = False
         
     ):
         """
@@ -52,6 +53,7 @@ class PostgresChat:
                 is generated from the schema. Defaults to None.
             system_prompt_path (str, optional): Path to a file containing a custom system prompt. 
                 Used if system_prompt is None. Defaults to None.
+            return_graph_object (bool, optional): Whether to return the graph object. Defaults to False.
 
         Raises:
             ValueError: If no valid OpenAI API key is provided (either explicitly or via environment variable).
@@ -77,6 +79,7 @@ class PostgresChat:
         self.llm_model = llm_model
         self.embedding_model = embedding_model
         self.system_prompt = system_prompt
+        self.return_graph_object = return_graph_object
 
         # Set up engine and cursor
         self.url = make_url(connection_string)
@@ -470,8 +473,10 @@ class PostgresChat:
                         labels = tool_arguments.get("labels", {})
                         template = tool_arguments.get("template", "plotly_white")
                         create_graph_json = None
+                        fig = None
+
                         try:
-                            create_graph_json = create_graph(
+                            create_graph_json, fig = create_graph(
                                 query=query,
                                 engine=self.engine,
                                 chart_type=chart_type,
@@ -497,6 +502,8 @@ class PostgresChat:
                             self.add_tool_response(tool_call.id, 'Graph created successfully.')
                             list_of_executed_queries.append(query)
                             response["graph_json"] = create_graph_json
+                            if self.return_graph_object:
+                                response["fig"] = fig
                             
                         
 

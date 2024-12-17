@@ -122,4 +122,4 @@ def create_graph(
 
     # 4) Export figure to JSON for frontend rendering
     fig_json = fig.to_json()
-    return fig_json
+    return fig_json, fig
