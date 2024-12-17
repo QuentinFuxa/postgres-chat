@@ -8,8 +8,9 @@ A **Retrieval-Augmented Generation (RAG)** handler class built around a PostgreS
 
 - **🧠 Sophisticated SQL Execution**:  Runs multi-step queries with pgvector embeddings for semantic search and filtering.
 
-- **📊 Plotly Graph Generation**: Helps transform free-form text “drafts” into structured objects (e.g., JSON) for database insertion.
+- **✍️ Create Data Entry**:  Generates a structured JSON representation ready for insertion into your PostgreSQL database
 
+- **📊 Plotly Graph Generation**: Transforms query results or free-form text inputs into interactive visualizations using Plotly
 
 ## Installation
 
@@ -171,8 +172,36 @@ This:
 - Generates embeddings for the specified columns.
 - Creates (or replaces) a table in the database with an extra column named text_column_embedding (type VECTOR(1536)).
 
+
+## **Exposing RAGHandler as a FastAPI Server**
+
+You can expose the **RAGHandler** as a REST API using FastAPI.
+
+---
+
+### **Setup**
+
+1. Use the file named **`endpoints.py`**
+
+2. The server will provide the following endpoints:
+
+- **`POST /ask-question`**: Accepts user questions and returns the LLM's response and executed SQL queries.  
+- **`GET /reinitialize`**: Reinitializes the RAGHandler message history.  
+- **`GET /show-system-prompt`**: Displays the current system prompt.
+
+---
+
+### **Running the Server**
+
+Start the FastAPI server using `uvicorn`:
+
+```bash
+uvicorn endpoints:app --host localhost --port 4000 --reload
+```
+
 ## Environment Variables
-	•	OPENAI_API_KEY: Your OpenAI API key must be set either in the environment or passed in code.
+
+- OPENAI_API_KEY: Your OpenAI API key must be set either in the environment or passed in code.
 
 ```
 export OPENAI_API_KEY="sk-..."
