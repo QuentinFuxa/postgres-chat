@@ -5,9 +5,9 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name='postgres-chat',
-    version='0.1.3',
+    version='0.1.5',
     description='Retrieval-Augmented Generation Handler using PostgreSQL and OpenAI',
-    url="https://github.com/QuentinFuxa/postgres-chat"
+    url="https://github.com/QuentinFuxa/postgres-chat",
     long_description=long_desc,
     long_description_content_type='text/markdown',
     author='Quentin Fuxa',
