@@ -397,6 +397,23 @@ class PostgresChat:
         with open(path, "w") as f:
             f.write(self.system_prompt)
         
+    def add_tool_response(self, tool_call_id: str, content: str):
+        """
+        Add a tool response to the conversation history.
+
+        Args:
+            tool_call_id (str): The ID of the tool call that generated the response.
+            content (str): The content of the tool response.
+
+        Side Effects:
+            - Updates the `messages` list with the new tool response.
+        """
+        self.messages.append({
+            "role": "tool",
+            "tool_call_id": tool_call_id,
+            "content": content
+        })
+
 
     def run_conversation(self) -> dict:
         """
@@ -408,7 +425,7 @@ class PostgresChat:
                 - executed_queries (list): A list of executed SQL queries during the conversation.
         """
         list_of_executed_queries = []
-        response_text = ""
+        response = {}
 
         while True:
             # Call the LLM with the current conversation
@@ -431,31 +448,15 @@ class PostgresChat:
                         # Summarize or truncate if needed
                         if len(sql_response) > 50000:
                             sql_response = "Query result is too long. Please try a simpler query."
-                        self.messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": sql_response
-                        })
+                        self.add_tool_response(tool_call.id, sql_response)
 
                     elif tool_call.function.name == "structure_object_from_draft":
                         draft_text = tool_arguments["draft"]
                         response_text = self.structure_object(draft_text)
-                        self.messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": response_text
-                        })
-
-                    elif tool_call.function.name == "plot_graph":
-                        json_graph = tool_arguments["json_graph"]
-                        self.messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": json_graph
-                        })
+                        self.add_tool_response(tool_call.id, response_text)
+                        response["response"] = response_text
 
                     elif tool_call.function.name == "create_graph":
-                        # Parse chart creation arguments
                         query = tool_arguments["query"]
                         chart_type = tool_arguments.get("chart_type", "bar")
                         x_col = tool_arguments.get("x_col")
@@ -468,28 +469,37 @@ class PostgresChat:
                         orientation = tool_arguments.get("orientation", "v")
                         labels = tool_arguments.get("labels", {})
                         template = tool_arguments.get("template", "plotly_white")
+                        create_graph_json = None
+                        try:
+                            create_graph_json = create_graph(
+                                query=query,
+                                engine=self.engine,
+                                chart_type=chart_type,
+                                x_col=x_col,
+                                y_col=y_col,
+                                color_col=color_col,
+                                size_col=size_col,
+                                title=title,
+                                width=width,
+                                height=height,
+                                orientation=orientation,
+                                labels=labels,
+                                template=template
+                            )
+                        except Exception as e:
+                            try:
+                                error = e.orig.pgerror
+                            except:
+                                error = str(e)
+                            self.add_tool_response(tool_call.id, error)
 
-                        # Call a hypothetical method that returns Plotly JSON
-                        create_graph_json = self.create_graph(
-                            query=query,
-                            chart_type=chart_type,
-                            x_col=x_col,
-                            y_col=y_col,
-                            color_col=color_col,
-                            size_col=size_col,
-                            title=title,
-                            width=width,
-                            height=height,
-                            orientation=orientation,
-                            labels=labels,
-                            template=template
-                        )
+                        if create_graph_json:
+                            self.add_tool_response(tool_call.id, 'Graph created successfully.')
+                            list_of_executed_queries.append(query)
+                            response["graph_json"] = create_graph_json
+                            
+                        
 
-                        self.messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": create_graph_json
-                        })
 
                     # If this is the last tool call, check if we need to return
                     if idx == len(tool_calls) - 1:
@@ -502,7 +512,5 @@ class PostgresChat:
                 response_text = assistant_message.content
                 break
 
-        return {
-            "response": response_text,
-            "executed_queries": list_of_executed_queries
-        }
+        response["executed_queries"] = list_of_executed_queries
+        return response
