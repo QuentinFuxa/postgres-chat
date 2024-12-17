@@ -7,8 +7,8 @@ from sqlalchemy.types import UserDefinedType
 import psycopg2
 from openai import OpenAI
 from typing import List, Dict, Any
-from prompt_and_tools import BASE_SYSTEM_PROMPT, STRUCTURE_OBJECT_PROMPT, TOOLS
-from charts import create_graph
+from postgres_chat.prompt_and_tools import BASE_SYSTEM_PROMPT, STRUCTURE_OBJECT_PROMPT, TOOLS
+from postgres_chat.charts import create_graph
 
 class VECTOR(UserDefinedType):
     """
@@ -109,14 +109,25 @@ class PostgresChat:
 
     def load_system_prompt(self, path: str):
         """
-        Loads the system prompt from a file.
+        Load a custom system prompt from a file.
+
+        Args:
+            path (str): The file path to the system prompt.
+
+        Side Effects:
+            - Updates the `system_prompt` attribute with the file contents.
         """
         with open(path, "r") as f:
             self.system_prompt = f.read()
 
-    def _generate_table_schema_and_sample(self):
+    def _generate_table_schema_and_sample(self) -> tuple:
         """
-        Generates a description of the table schema and retrieves sample rows.
+        Generate the table schema and retrieve sample rows.
+
+        Returns:
+            tuple: A tuple containing:
+                - schema_description (str): Human-readable schema description.
+                - sample_data (list): List of sample rows as dictionaries.
         """
         with self.engine.connect() as conn:
             schema_query = f"""
@@ -146,8 +157,14 @@ class PostgresChat:
 
     def _summarize_table_columns(self, schema_description: str, sample_data: List[Dict[str, Any]]) -> str:
         """
-        Queries the LLM to generate a synthesis or summary for each column based on
-        the schema description and sample data.
+        Generate a summary of table columns using LLM.
+
+        Args:
+            schema_description (str): The table schema description.
+            sample_data (List[Dict[str, Any]]): Sample rows from the table.
+
+        Returns:
+            str: A structured summary of each column.
         """
         prompt = f"""
             You have the following database table schema:
@@ -185,7 +202,10 @@ class PostgresChat:
 
     def _generate_system_prompt(self):
         """
-        Generates the initial system prompt describing the table structure and columns.
+        Generate the system prompt describing the table's schema and columns.
+
+        Side Effects:
+            - Updates the `system_prompt` attribute with the generated prompt.
         """
         schema_description, sample_data = self._generate_table_schema_and_sample()
         columns_synthesis = self._summarize_table_columns(schema_description, sample_data)
@@ -198,7 +218,13 @@ class PostgresChat:
 
     def _replace_vector_placeholders(self, sql_query: str) -> str:
         """
-        Replaces <vector>TEXT<vector/> placeholders with embeddings in SQL queries.
+        Replace <vector> placeholders with embeddings in SQL queries.
+
+        Args:
+            sql_query (str): The SQL query containing placeholders.
+
+        Returns:
+            str: The updated SQL query with embeddings inserted.
         """
         placeholders = re.findall(r"<vector>(.*?)<vector/>", sql_query)
         for text in placeholders:
@@ -210,7 +236,13 @@ class PostgresChat:
 
     def _generate_embedding(self, text: str) -> List[float]:
         """
-        Generates an embedding for a given text using the specified OpenAI model.
+        Generate an embedding for a given text using OpenAI's embedding model.
+
+        Args:
+            text (str): The text to embed.
+
+        Returns:
+            List[float]: A list representing the embedding vector.
         """
         response = self.client.embeddings.create(
             input=text,
@@ -221,8 +253,13 @@ class PostgresChat:
 
     def execute_sql_query(self, sql_query: str) -> str:
         """
-        Executes an SQL query after converting <vector> placeholders into actual vector embeddings.
-        Returns the query results or an error message.
+        Execute an SQL query after replacing placeholders with embeddings.
+
+        Args:
+            sql_query (str): The SQL query to execute.
+
+        Returns:
+            str: The results of the query or an error message if the query fails.
         """
         sql_query = self._replace_vector_placeholders(sql_query)
         try:
@@ -235,8 +272,13 @@ class PostgresChat:
 
     def llm_prompt(self, conversation_messages: List[Dict[str, Any]]) -> Any:
         """
-        Generic function to send messages to the LLM using Chat Completion.
-        Includes the custom 'TOOLS' spec for function calls.
+        Send conversation messages to the LLM using the Chat Completion API.
+
+        Args:
+            conversation_messages (List[Dict[str, Any]]): A list of conversation messages.
+
+        Returns:
+            Any: The LLM response object.
         """
         response = self.client.chat.completions.create(
             model=self.llm_model,
@@ -249,7 +291,13 @@ class PostgresChat:
 
     def structure_object(self, draft: str) -> str:
         """
-        Uses the LLM to structure an object (JSON or dictionary) for potential DB insertion.
+        Structure a draft object (like a JSON or dictionary) for database insertion.
+
+        Args:
+            draft (str): A user-provided draft to structure.
+
+        Returns:
+            str: A structured version of the draft.
         """
         schema_description, _ = self._generate_table_schema_and_sample()
 
@@ -270,14 +318,17 @@ class PostgresChat:
         return response.choices[0].message.content
 
 
-    def create_table_from_df(
-        self,
-        df: pd.DataFrame,
-        embed_columns: List[str] = None,
-        table_name: str = None
-    ):
+    def create_table_from_df(self, df: pd.DataFrame, embed_columns: List[str] = None, table_name: str = None):
         """
-        Creates or replaces a table from a pandas DataFrame, embedding specified columns.
+        Create or replace a table in the database from a pandas DataFrame.
+
+        Args:
+            df (pd.DataFrame): The DataFrame to create the table from.
+            embed_columns (List[str], optional): Columns to generate embeddings for.
+            table_name (str, optional): Name of the table to create. Defaults to the instance's table_name.
+
+        Side Effects:
+            - Writes the DataFrame into the specified table.
         """
         if embed_columns is None:
             embed_columns = []
@@ -306,7 +357,13 @@ class PostgresChat:
 
     def add_user_message(self, user_content: str):
         """
-        Adds a user message to the conversation history.
+        Add a user message to the conversation history.
+
+        Args:
+            user_content (str): The content of the user message.
+
+        Side Effects:
+            - Updates the `messages` list with the new user message.
         """
         self.messages.append({
             "role": "user",
@@ -315,7 +372,10 @@ class PostgresChat:
 
     def reinitialize_messages(self):
         """
-        Reinitializes the conversation messages to only include the system prompt.
+        Reinitialize the conversation history to only include the system prompt.
+
+        Side Effects:
+            - Resets the `messages` list.
         """
         self.messages = [
             {
@@ -326,7 +386,13 @@ class PostgresChat:
         
     def save_system_prompt(self, path: str):
         """
-        Saves the system prompt to a file.
+        Save the current system prompt to a file.
+
+        Args:
+            path (str): The file path where the prompt will be saved.
+
+        Side Effects:
+            - Writes the system prompt to the specified file.
         """
         with open(path, "w") as f:
             f.write(self.system_prompt)
@@ -334,8 +400,12 @@ class PostgresChat:
 
     def run_conversation(self) -> dict:
         """
-        Executes the conversation flow until the LLM stops making tool calls 
-        and provides a final response.
+        Execute the conversation flow with the LLM, handling tool calls as needed.
+
+        Returns:
+            dict: A dictionary containing:
+                - response (str): Final response text from the LLM.
+                - executed_queries (list): A list of executed SQL queries during the conversation.
         """
         list_of_executed_queries = []
         response_text = ""
