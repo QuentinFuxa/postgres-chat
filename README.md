@@ -4,36 +4,18 @@ A **Retrieval-Augmented Generation (RAG)** handler class built around a PostgreS
 
 ## Features
 
-- **System Prompt Generation:** Automates the creation of a system prompt that describes your PostgreSQL table schema and sample rows.
+- **🚀 System Prompt Generation:** Automates the creation of a system prompt that describes your PostgreSQL table schema and sample rows.
 
-- **Sophisticated SQL Execution**:  Runs multi-step queries with pgvector embeddings for semantic search and filtering.
+- **🧠 Sophisticated SQL Execution**:  Runs multi-step queries with pgvector embeddings for semantic search and filtering.
 
-- **Plotly Graph Generation**: Helps transform free-form text “drafts” into structured objects (e.g., JSON) for database insertion.
+- **📊 Plotly Graph Generation**: Helps transform free-form text “drafts” into structured objects (e.g., JSON) for database insertion.
 
 
 ## Installation
 
 ```
-# Clone the repository
-git clone https://github.com/QuentinFuxa/postgres-chat
-
-# Navigate into the repo
-cd postgres-chat
-
-# (Optional) Create and activate a virtual environment
-python3 -m venv venv
-source venv/bin/activate  # Linux/MacOS
-# or:
-# .\venv\Scripts\activate  # Windows
+pip install postgres-chat
 ```
-
-
-## Install dependencies
-
-```
-pip install -r requirements.txt
-```
-
 
 **Prerequisites**
 
